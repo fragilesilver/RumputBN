@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { billableAreaM2, type AreaKind, type DrawnShape } from "./geo";
+import { billableAreaM2, isInBrunei, jobLocation, type AreaKind, type DrawnShape } from "./geo";
 
 // Roughly 1 m in degrees near Bandar Seri Begawan (lat ≈ 4.9°).
 const M_LAT = 1 / 110_574;
@@ -49,5 +49,19 @@ describe("billableAreaM2", () => {
 
   it("ignores exclusion-only drawings", () => {
     expect(billableAreaM2([rect(0, 0, 10, 10, "exclude")])).toBe(0);
+  });
+});
+
+describe("jobLocation & isInBrunei", () => {
+  it("centres on the grass shapes only", () => {
+    const loc = jobLocation([rect(0, 0, 20, 20), rect(500, 500, 10, 10, "exclude")]);
+    expect(loc?.lng).toBeCloseTo(ORIGIN.lng + 10 * M_LNG, 6);
+    expect(loc?.lat).toBeCloseTo(ORIGIN.lat + 10 * M_LAT, 6);
+  });
+
+  it("knows Brunei from Kuala Lumpur", () => {
+    expect(isInBrunei(114.94, 4.89)).toBe(true);
+    expect(isInBrunei(101.69, 3.14)).toBe(false);
+    expect(isInBrunei(Number.NaN, 4.9)).toBe(false);
   });
 });

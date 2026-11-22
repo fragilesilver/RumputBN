@@ -1,11 +1,28 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useMemo, useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useMemo, useState, useTransition, type FormEvent } from "react";
 import type { GeocodeResult } from "@/app/api/geocode/route";
+import { requestJob } from "@/app/jobs/actions";
 import { billableAreaM2, type DrawnShape } from "@/lib/geo";
 import { calculateQuote, formatBND, type Extras, type GrassCondition } from "@/lib/pricing";
+import type { Role } from "@/lib/types";
 import type { QuoteMapApi, Tool } from "./QuoteMap";
+
+/** Survives the round trip through /login so the customer doesn't redraw. */
+const DRAFT_KEY = "rumputbn:quote-draft";
+
+type Draft = {
+  shapes: DrawnShape[];
+  condition: GrassCondition;
+  extras: Extras;
+  preferredDate: string;
+  notes: string;
+};
+
+export type QuoteViewer = { signedIn: boolean; role: Role | null };
 
 const QuoteMap = dynamic(() => import("./QuoteMap"), {
   ssr: false,
@@ -34,13 +51,24 @@ const TOOLS: { value: Tool; label: string; hint: string }[] = [
   { value: "edit", label: "Edit", hint: "Tap a shape to select it, then drag its points. Right-click a point to remove it." },
 ];
 
-export default function QuoteTool() {
+export default function QuoteTool({
+  viewer,
+  bookingEnabled,
+}: {
+  viewer: QuoteViewer | null;
+  bookingEnabled: boolean;
+}) {
+  const router = useRouter();
   const [api, setApi] = useState<QuoteMapApi | null>(null);
   const [tool, setTool] = useState<Tool>("grass");
   const [shapes, setShapes] = useState<DrawnShape[]>([]);
   const [hasSelection, setHasSelection] = useState(false);
   const [condition, setCondition] = useState<GrassCondition>("normal");
   const [extras, setExtras] = useState<Extras>({ removeClippings: false, edging: false, slope: false });
+  const [preferredDate, setPreferredDate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, startSubmit] = useTransition();
 
   const areaM2 = useMemo(() => billableAreaM2(shapes), [shapes]);
   const quote = useMemo(
@@ -53,7 +81,49 @@ export default function QuoteTool() {
     api?.setTool(next);
   };
 
-  const handleReady = useCallback((mapApi: QuoteMapApi) => setApi(mapApi), []);
+  // When the map is ready, restore a draft saved before the customer was sent to sign in.
+  const handleReady = useCallback((mapApi: QuoteMapApi) => {
+    setApi(mapApi);
+    let draft: Draft | null = null;
+    try {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if (raw) draft = JSON.parse(raw) as Draft;
+      sessionStorage.removeItem(DRAFT_KEY);
+    } catch {
+      return;
+    }
+    if (!draft || !Array.isArray(draft.shapes) || draft.shapes.length === 0) return;
+    mapApi.loadShapes(draft.shapes);
+    setCondition(draft.condition);
+    setExtras(draft.extras);
+    setPreferredDate(draft.preferredDate ?? "");
+    setNotes(draft.notes ?? "");
+    setTool("edit");
+    mapApi.setTool("edit");
+  }, []);
+
+  const requestCutter = () => {
+    const draft: Draft = { shapes, condition, extras, preferredDate, notes };
+    const goSignIn = (path: "/login" | "/onboarding") => {
+      try {
+        sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      } catch {
+        // Private mode: they'll just need to redraw.
+      }
+      router.push(`${path}?next=${encodeURIComponent("/")}`);
+    };
+    if (!viewer?.signedIn) return goSignIn("/login");
+
+    setSubmitError(null);
+    startSubmit(async () => {
+      const res = await requestJob({ ...draft, preferredDate: preferredDate || null, notes: notes || null });
+      if (res.ok) router.push(`/jobs/${res.jobId}`);
+      else if (res.needs) goSignIn(res.needs === "login" ? "/login" : "/onboarding");
+      else setSubmitError(res.error);
+    });
+  };
+
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Brunei" });
 
   return (
     <div className="flex h-dvh flex-col bg-stone-50 text-stone-900 lg:flex-row">
@@ -101,9 +171,21 @@ export default function QuoteTool() {
       <aside className="flex-1 overflow-y-auto border-stone-200 lg:w-[400px] lg:flex-none lg:border-l">
         <div className="space-y-6 p-4 sm:p-6">
           <header>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Rumput<span className="text-green-700">BN</span>
-            </h1>
+            <div className="flex items-center justify-between gap-4">
+              <h1 className="text-2xl font-bold tracking-tight">
+                Rumput<span className="text-green-700">BN</span>
+              </h1>
+              {bookingEnabled &&
+                (viewer?.signedIn ? (
+                  <Link href="/jobs" className="text-sm font-medium text-green-800">
+                    My jobs →
+                  </Link>
+                ) : (
+                  <Link href="/login" className="text-sm font-medium text-green-800">
+                    Sign in
+                  </Link>
+                ))}
+            </div>
             <p className="mt-1 text-sm text-stone-600">
               Draw your grass on the map and get a fair, upfront price for cutting it.
             </p>
@@ -213,13 +295,61 @@ export default function QuoteTool() {
                       </div>
                     )}
                   </dl>
-                  <button
-                    type="button"
-                    disabled
-                    className="mt-4 w-full rounded-lg bg-green-700 py-3 font-semibold text-white disabled:opacity-60"
-                  >
-                    Find a grass cutter (coming soon)
-                  </button>
+                  {!bookingEnabled ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="mt-4 w-full rounded-lg bg-green-700 py-3 font-semibold text-white disabled:opacity-60"
+                    >
+                      Find a grass cutter (coming soon)
+                    </button>
+                  ) : viewer?.role === "cutter" ? (
+                    <p className="mt-4 rounded-lg bg-stone-100 p-3 text-sm text-stone-600">
+                      You&apos;re signed in as a cutter. <Link href="/jobs" className="font-medium text-green-800">See jobs near you →</Link>
+                    </p>
+                  ) : (
+                    <div className="mt-4 space-y-3 border-t border-stone-100 pt-4">
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className="text-sm">
+                          <span className="mb-1 block text-stone-600">Preferred date</span>
+                          <input
+                            type="date"
+                            min={today}
+                            value={preferredDate}
+                            onChange={(e) => setPreferredDate(e.target.value)}
+                            className="w-full rounded-lg bg-white px-2 py-2 ring-1 ring-stone-300"
+                          />
+                        </label>
+                        <label className="text-sm">
+                          <span className="mb-1 block text-stone-600">Notes</span>
+                          <input
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            maxLength={500}
+                            placeholder="Gate, dogs, parking…"
+                            className="w-full rounded-lg bg-white px-2 py-2 ring-1 ring-stone-300"
+                          />
+                        </label>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={requestCutter}
+                        disabled={submitting}
+                        className="w-full rounded-lg bg-green-700 py-3 font-semibold text-white disabled:opacity-60"
+                      >
+                        {submitting
+                          ? "Sending request…"
+                          : viewer?.signedIn
+                            ? "Request a grass cutter"
+                            : "Sign in to request a cutter"}
+                      </button>
+                      {submitError && (
+                        <p role="alert" className="text-sm text-red-700">
+                          {submitError}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </>
               )
             ) : (

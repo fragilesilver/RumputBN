@@ -12,6 +12,8 @@
     "prebuild": "node scripts/copy-maplibre-worker.mjs"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.119.2",
     "@turf/area": "^7.4.0",
     "@turf/difference": "^7.4.0",
     "@turf/helpers": "^7.4.0",
@@ -20,6 +22,7 @@
     "next": "^16.4.6",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "server-only": "^0.0.1",
     "terra-draw": "^1.40.0",
     "terra-draw-maplibre-gl-adapter": "^1.5.0"
   },

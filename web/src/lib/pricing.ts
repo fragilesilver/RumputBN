@@ -154,6 +154,36 @@ export function calculateQuote(
   };
 }
 
+/**
+ * Platform commission, taken from the cutter's side: the customer pays the
+ * agreed job price and nothing more; the cutter receives the price minus the
+ * platform's share. The live rate is stored in the `platform_settings` table
+ * and snapshotted onto each job when an offer is accepted.
+ */
+export const DEFAULT_COMMISSION_RATE = 0.2;
+
+export type EarningsSplit = {
+  /** What the customer pays. */
+  jobPrice: number;
+  /** Platform's share of the job price. */
+  platformFee: number;
+  /** What the cutter receives. */
+  cutterPayout: number;
+  commissionRate: number;
+};
+
+export function splitEarnings(
+  jobPrice: number,
+  commissionRate: number = DEFAULT_COMMISSION_RATE,
+): EarningsSplit {
+  if (!(commissionRate >= 0 && commissionRate < 1)) {
+    throw new RangeError(`commissionRate must be in [0, 1), got ${commissionRate}`);
+  }
+  const price = round2(Math.max(0, jobPrice));
+  const platformFee = round2(price * commissionRate);
+  return { jobPrice: price, platformFee, cutterPayout: round2(price - platformFee), commissionRate };
+}
+
 export function formatBND(amount: number): string {
   return `B$${amount.toLocaleString("en", {
     minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,

@@ -38,12 +38,34 @@ The defaults live in `web/src/lib/pricing.ts` (`DEFAULT_PRICING`). They are
 | Cutter counter-offer band | ±15% |
 | Above 20,000 m² | Needs a site visit (no instant quote) |
 
+## Platform commission
+
+The customer pays only the agreed job price. The platform's commission comes
+out of the cutter's side:
+
+```
+customer pays  = agreed price           (e.g. B$45)
+platform fee   = agreed price × 20%     (B$9)
+cutter payout  = agreed price − fee     (B$36)
+```
+
+- Default **20%**, stored in the `platform_settings` table, so it can change
+  without a deploy. Benchmarks: ride-hailing and delivery apps take ~20–30%,
+  home-services marketplaces 15–25%.
+- The rate is **copied onto each job when an offer is accepted**, so changing
+  it never alters jobs already agreed.
+- Cutters see their payout after the fee before they make an offer.
+- Risk to watch: if the fee feels too high, cutters and repeat customers will
+  arrange jobs directly by WhatsApp and skip the platform. Consider a lower
+  rate for repeat bookings, or perks only the platform provides (guaranteed
+  payment, insurance, ratings, a steady flow of jobs).
+
 ## Stack
 
 | Layer | Choice |
 |---|---|
 | App | Next.js (App Router, TypeScript, Tailwind) — installable PWA later |
-| Backend | Supabase: Postgres + PostGIS, Auth (phone OTP), Realtime, Storage |
+| Backend | Supabase: Postgres + PostGIS, Auth (SMS one-time codes), Storage later |
 | Map | MapLibre GL + Terra Draw (drawing) + Turf.js (area, union/difference) |
 | Imagery | Esri World Imagery by default (configurable via env) |
 | Geocoding | OpenStreetMap Nominatim via `/api/geocode`, limited to Brunei |
@@ -58,14 +80,24 @@ The defaults live in `web/src/lib/pricing.ts` (`DEFAULT_PRICING`). They are
 - Condition + extras, live price, breakdown, fair range.
 - Unit tests for pricing and area maths.
 
-### Phase 2 — Accounts & booking
-- Supabase project, phone-number login (customers + cutters).
-- Save a property (its shapes) so repeat quotes are one tap.
-- Job request: date window, notes, photos.
-- Cutter profile: service area (PostGIS radius/polygon), equipment, availability.
-- Matching: notify cutters whose service area covers the job.
-- Accept at recommended price, or counter-offer within the fair band.
-- Server-side re-pricing on job creation (never trust client totals).
+### Phase 2 — Accounts & booking ✅
+- SMS login/registration for customers and cutters (`/login`, `/onboarding`).
+- Request a cutter from the quote; the drawing survives the sign-in detour.
+- Server re-prices every request from the shapes (client totals ignored).
+- Cutter service area: base pin + radius (`/cutter/setup`), PostGIS matching.
+- Cutters see nearby open jobs with approximate location only; offer within
+  the fair band (enforced in the database), see payout after commission.
+- Customer compares offers, accepts one; price, 20% fee and payout locked in.
+- Contact unlocked after booking: call, WhatsApp, directions.
+- Status: open → assigned → in progress → done; customer can cancel.
+- Schema + RLS in `supabase/migrations`, tested by `supabase/tests`.
+
+Still to do from Phase 2:
+- Notify cutters of new nearby jobs (SMS/WhatsApp/push). Today they see
+  them when they open the app (the page refreshes every 20 s).
+- Save properties so repeat customers don't redraw.
+- Photos with the request.
+- Rate-limit job requests per customer.
 
 ### Phase 3 — Doing the job
 - Job status: accepted → on the way → in progress → done.
@@ -83,7 +115,7 @@ The defaults live in `web/src/lib/pricing.ts` (`DEFAULT_PRICING`). They are
 - Seasonal / monsoon demand pricing; calibrate rates from completed jobs.
 
 ## Open questions
-- Commission rate, and who pays it (customer fee vs. cutter cut).
+- Is 20% the right commission for launch? (Configurable in `platform_settings`.)
 - Cutter verification requirements.
 - Imagery licence for commercial launch (Esri terms vs. MapTiler / Google Map Tiles).
 - Payment providers available for a Brunei marketplace.

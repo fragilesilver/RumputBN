@@ -1,27 +1,16 @@
 "use client";
 
 import {
-  getVersion,
-  Map as MapLibreMap,
-  NavigationControl,
-  setWorkerUrl,
-  type StyleSpecification,
-} from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
-import {
   TerraDraw,
   TerraDrawPolygonMode,
   TerraDrawSelectMode,
   ValidateNotSelfIntersecting,
   type GeoJSONStoreFeatures,
-  type HexColor,
 } from "terra-draw";
 import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter";
 import { useEffect, useRef } from "react";
-import type { AreaKind, DrawnShape } from "@/lib/geo";
-
-// Copied into /public by scripts/copy-maplibre-worker.mjs (predev / prebuild).
-setWorkerUrl(`/maplibre-gl-worker.mjs?v=${getVersion()}`);
+import { shapesBounds, type AreaKind, type DrawnShape } from "@/lib/geo";
+import { AREA_COLORS as COLORS, createBaseMap } from "./map/base";
 
 export type Tool = AreaKind | "edit";
 
@@ -30,53 +19,14 @@ export type QuoteMapApi = {
   setTool: (tool: Tool) => void;
   deleteSelected: () => void;
   clear: () => void;
+  /** Restore previously drawn shapes (e.g. after signing in). */
+  loadShapes: (shapes: DrawnShape[]) => void;
 };
 
 type Props = {
   onReady: (api: QuoteMapApi) => void;
   onShapesChange: (shapes: DrawnShape[]) => void;
   onSelectionChange: (hasSelection: boolean) => void;
-};
-
-// Brunei-Muara district / Bandar Seri Begawan.
-const BRUNEI_CENTER: [number, number] = [114.94, 4.89];
-const BRUNEI_BOUNDS: [[number, number], [number, number]] = [
-  [113.8, 3.8],
-  [115.6, 5.3],
-];
-
-const SATELLITE_TILES =
-  process.env.NEXT_PUBLIC_SATELLITE_TILE_URL ??
-  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
-const LABEL_TILES =
-  process.env.NEXT_PUBLIC_LABEL_TILE_URL ??
-  "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
-const ATTRIBUTION =
-  process.env.NEXT_PUBLIC_SATELLITE_ATTRIBUTION ??
-  "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community";
-
-const MAP_STYLE: StyleSpecification = {
-  version: 8,
-  sources: {
-    satellite: {
-      type: "raster",
-      tiles: [SATELLITE_TILES],
-      tileSize: 256,
-      maxzoom: 19,
-      attribution: ATTRIBUTION,
-    },
-    labels: { type: "raster", tiles: [LABEL_TILES], tileSize: 256, maxzoom: 19 },
-  },
-  layers: [
-    { id: "background", type: "background", paint: { "background-color": "#1f2a1f" } },
-    { id: "satellite", type: "raster", source: "satellite" },
-    { id: "labels", type: "raster", source: "labels" },
-  ],
-};
-
-const COLORS: Record<AreaKind, { fill: HexColor; line: HexColor }> = {
-  grass: { fill: "#4ade80", line: "#16a34a" },
-  exclude: { fill: "#f87171", line: "#dc2626" },
 };
 
 function polygonMode(kind: AreaKind) {
@@ -129,19 +79,7 @@ export default function QuoteMap({ onReady, onShapesChange, onSelectionChange }:
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const map = new MapLibreMap({
-      container: containerRef.current,
-      style: MAP_STYLE,
-      center: BRUNEI_CENTER,
-      zoom: 11,
-      maxZoom: 21,
-      maxBounds: BRUNEI_BOUNDS,
-      attributionControl: { compact: true },
-      dragRotate: false,
-      pitchWithRotate: false,
-    });
-    map.touchZoomRotate.disableRotation();
-    map.addControl(new NavigationControl({ showCompass: false }), "top-right");
+    const map = createBaseMap(containerRef.current);
 
     let draw: TerraDraw | null = null;
     let selectedId: string | number | null = null;
@@ -198,6 +136,20 @@ export default function QuoteMap({ onReady, onShapesChange, onSelectionChange }:
             draw.removeFeatures([id]);
             emit();
           }
+        },
+        loadShapes: (shapes) => {
+          if (!draw) return;
+          draw.clear();
+          draw.addFeatures(
+            shapes.map((s) => ({
+              type: "Feature",
+              geometry: s.geometry,
+              properties: { mode: s.properties.kind },
+            })),
+          );
+          const b = shapesBounds(shapes);
+          if (b) map.fitBounds(b, { padding: 60, maxZoom: 20, duration: 0 });
+          emit();
         },
         clear: () => {
           draw?.clear();

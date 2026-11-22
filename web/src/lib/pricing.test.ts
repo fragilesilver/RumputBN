@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { calculateQuote, DEFAULT_PRICING, formatBND, tieredMowingCost } from "./pricing";
+import {
+  calculateQuote,
+  DEFAULT_COMMISSION_RATE,
+  DEFAULT_PRICING,
+  formatBND,
+  splitEarnings,
+  tieredMowingCost,
+} from "./pricing";
 
 const noExtras = { removeClippings: false, edging: false, slope: false };
 
@@ -76,5 +83,29 @@ describe("formatBND", () => {
     expect(formatBND(37)).toBe("B$37");
     expect(formatBND(6.5)).toBe("B$6.50");
     expect(formatBND(1200)).toBe("B$1,200");
+  });
+});
+
+describe("splitEarnings", () => {
+  it("takes the default commission from the cutter's side", () => {
+    expect(DEFAULT_COMMISSION_RATE).toBe(0.2);
+    expect(splitEarnings(37)).toEqual({
+      jobPrice: 37,
+      platformFee: 7.4,
+      cutterPayout: 29.6,
+      commissionRate: 0.2,
+    });
+  });
+
+  it("always adds back up to the job price", () => {
+    for (const price of [25, 33, 41.5, 99.99, 1234]) {
+      const s = splitEarnings(price, 0.225);
+      expect(s.platformFee + s.cutterPayout).toBeCloseTo(s.jobPrice, 10);
+    }
+  });
+
+  it("rejects nonsensical rates", () => {
+    expect(() => splitEarnings(50, 1)).toThrow(RangeError);
+    expect(() => splitEarnings(50, -0.1)).toThrow(RangeError);
   });
 });
