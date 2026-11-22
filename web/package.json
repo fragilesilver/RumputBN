@@ -1,0 +1,38 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run",
+    "predev": "node scripts/copy-maplibre-worker.mjs",
+    "prebuild": "node scripts/copy-maplibre-worker.mjs"
+  },
+  "dependencies": {
+    "@turf/area": "^7.4.0",
+    "@turf/difference": "^7.4.0",
+    "@turf/helpers": "^7.4.0",
+    "@turf/union": "^7.4.0",
+    "maplibre-gl": "^6.19.0",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "terra-draw": "^1.40.0",
+    "terra-draw-maplibre-gl-adapter": "^1.5.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/geojson": "^7946.0.16",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "^16.4.6",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^4.1.12"
+  }
+}
