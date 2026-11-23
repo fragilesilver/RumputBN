@@ -185,9 +185,9 @@ select set_config('request.jwt.claim.sub', :customer, false);
 set role authenticated;
 select public.accept_offer(:'offer_id');
 select tests.expect(
-  (select status = 'assigned' and agreed_price = 42 and commission_rate = 0.20
-          and platform_fee = 8.40 and cutter_payout = 33.60 from public.jobs),
-  'accepting locks in price, 20% platform fee and cutter payout');
+  (select status = 'assigned' and agreed_price = 42 and commission_rate = 0.10
+          and platform_fee = 4.20 and cutter_payout = 37.80 from public.jobs),
+  'accepting locks in price, 10% platform fee and cutter payout');
 select tests.expect_error(format('select public.accept_offer(%L)', :'offer_id'), 'no longer pending');
 select tests.expect_error(format('select public.set_job_status(%L, %L)', :job, 'completed'), 'Cannot change');
 select tests.expect_error($$update public.platform_settings set commission_rate = 0$$, 'permission denied');

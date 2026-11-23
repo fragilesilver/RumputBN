@@ -4,8 +4,8 @@
  * Pure functions only (no React, no network) so the same logic can run in the
  * browser for live quotes and on the server when a booking is created.
  *
- * All money is in Brunei dollars (BND). The default rates below are starting
- * PLACEHOLDERS to be tuned against real jobs — they are not market research.
+ * All money is in Brunei dollars (BND). Rates are calibrated to one real job
+ * (B$30 for a ~700 m² lawn, Nov 2026); refine as more real prices come in.
  */
 
 export type GrassCondition = "normal" | "long" | "overgrown";
@@ -43,17 +43,17 @@ export type PricingConfig = {
 
 export const DEFAULT_PRICING: PricingConfig = {
   currency: "BND",
-  calloutFee: 10,
+  calloutFee: 5,
   tiers: [
-    { upToM2: 200, perM2: 0.1 },
-    { upToM2: 1000, perM2: 0.07 },
-    { upToM2: null, perM2: 0.05 },
+    { upToM2: 200, perM2: 0.05 },
+    { upToM2: 1000, perM2: 0.03 },
+    { upToM2: null, perM2: 0.02 },
   ],
   conditionMultiplier: { normal: 1, long: 1.25, overgrown: 1.6 },
-  removeClippings: { perM2: 0.02, min: 8 },
-  edgingFlat: 8,
+  removeClippings: { perM2: 0.01, min: 5 },
+  edgingFlat: 5,
   slopeMultiplier: 1.15,
-  minimumJob: 25,
+  minimumJob: 15,
   fairBand: 0.15,
   maxAutoQuoteM2: 20000,
 };
@@ -160,7 +160,7 @@ export function calculateQuote(
  * platform's share. The live rate is stored in the `platform_settings` table
  * and snapshotted onto each job when an offer is accepted.
  */
-export const DEFAULT_COMMISSION_RATE = 0.2;
+export const DEFAULT_COMMISSION_RATE = 0.1;
 
 export type EarningsSplit = {
   /** What the customer pays. */

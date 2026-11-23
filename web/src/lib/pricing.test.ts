@@ -14,14 +14,14 @@ describe("tieredMowingCost", () => {
   const tiers = DEFAULT_PRICING.tiers;
 
   it("charges only the first tier for small lawns", () => {
-    expect(tieredMowingCost(100, tiers)).toBeCloseTo(10);
+    expect(tieredMowingCost(100, tiers)).toBeCloseTo(5);
   });
 
   it("splits area across tiers", () => {
-    // 200 × 0.10 + 100 × 0.07
-    expect(tieredMowingCost(300, tiers)).toBeCloseTo(27);
-    // 200 × 0.10 + 800 × 0.07 + 500 × 0.05
-    expect(tieredMowingCost(1500, tiers)).toBeCloseTo(101);
+    // 200 × 0.05 + 100 × 0.03
+    expect(tieredMowingCost(300, tiers)).toBeCloseTo(13);
+    // 200 × 0.05 + 800 × 0.03 + 500 × 0.02
+    expect(tieredMowingCost(1500, tiers)).toBeCloseTo(44);
   });
 
   it("treats negative area as zero", () => {
@@ -30,11 +30,18 @@ describe("tieredMowingCost", () => {
 });
 
 describe("calculateQuote", () => {
-  it("prices a typical 300 m² house compound", () => {
+  it("matches the real calibration job: ~700 m² of grass for B$30", () => {
+    const q = calculateQuote({ areaM2: 700, condition: "normal", extras: noExtras });
+    expect(q.subtotal).toBeCloseTo(30); // 5 call-out + 10 + 15 mowing
+    expect(q.total).toBe(30);
+    expect(q.fairRange).toEqual({ min: 26, max: 35 });
+  });
+
+  it("prices a small 300 m² compound", () => {
     const q = calculateQuote({ areaM2: 300, condition: "normal", extras: noExtras });
-    expect(q.subtotal).toBeCloseTo(37); // 10 call-out + 27 mowing
-    expect(q.total).toBe(37);
-    expect(q.fairRange).toEqual({ min: 31, max: 43 });
+    expect(q.subtotal).toBeCloseTo(18); // 5 call-out + 13 mowing
+    expect(q.total).toBe(18);
+    expect(q.fairRange).toEqual({ min: 15, max: 21 });
     expect(q.minimumApplied).toBe(false);
   });
 
@@ -50,9 +57,9 @@ describe("calculateQuote", () => {
       condition: "overgrown",
       extras: { ...noExtras, slope: true },
     });
-    // mowing 27; overgrown +60% = 16.2; slope 15% of (27 × 1.6) = 6.48
-    expect(q.subtotal).toBeCloseTo(10 + 27 + 16.2 + 6.48);
-    expect(q.total).toBe(60);
+    // mowing 13; overgrown +60% = 7.8; slope 15% of (13 × 1.6) = 3.12
+    expect(q.subtotal).toBeCloseTo(5 + 13 + 7.8 + 3.12);
+    expect(q.total).toBe(29);
   });
 
   it("charges clippings removal with a minimum, and flat edging", () => {
@@ -61,15 +68,15 @@ describe("calculateQuote", () => {
       condition: "normal",
       extras: { ...noExtras, removeClippings: true, edging: true },
     });
-    // clippings: max(8, 300 × 0.02 = 6) = 8; edging 8
-    expect(small.subtotal).toBeCloseTo(37 + 8 + 8);
+    // clippings: max(5, 300 × 0.01 = 3) = 5; edging 5
+    expect(small.subtotal).toBeCloseTo(18 + 5 + 5);
 
     const big = calculateQuote({
       areaM2: 1000,
       condition: "normal",
       extras: { ...noExtras, removeClippings: true },
     });
-    expect(big.lines.find((l) => l.label === "Remove clippings")?.amount).toBe(20);
+    expect(big.lines.find((l) => l.label === "Remove clippings")?.amount).toBe(10);
   });
 
   it("flags very large areas for a site visit", () => {
@@ -88,12 +95,12 @@ describe("formatBND", () => {
 
 describe("splitEarnings", () => {
   it("takes the default commission from the cutter's side", () => {
-    expect(DEFAULT_COMMISSION_RATE).toBe(0.2);
-    expect(splitEarnings(37)).toEqual({
-      jobPrice: 37,
-      platformFee: 7.4,
-      cutterPayout: 29.6,
-      commissionRate: 0.2,
+    expect(DEFAULT_COMMISSION_RATE).toBe(0.1);
+    expect(splitEarnings(30)).toEqual({
+      jobPrice: 30,
+      platformFee: 3,
+      cutterPayout: 27,
+      commissionRate: 0.1,
     });
   });
 

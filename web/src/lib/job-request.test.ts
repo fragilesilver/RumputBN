@@ -29,14 +29,14 @@ describe("validateJobRequest", () => {
     if (!r.ok) return;
     expect(r.value.areaM2).toBeGreaterThan(295);
     expect(r.value.areaM2).toBeLessThan(305);
-    expect(r.value.quote.total).toBe(37);
+    expect(r.value.quote.total).toBe(18);
     expect(r.value.notes).toBe("Gate code 1234");
     expect(r.value.location.lng).toBeGreaterThan(114.94);
   });
 
   it("ignores any price the client tries to send", () => {
     const r = validateJobRequest({ ...base, quote: { total: 1 }, total: 1 }, today);
-    expect(r.ok && r.value.quote.total).toBe(37);
+    expect(r.ok && r.value.quote.total).toBe(18);
   });
 
   it("rejects shapes outside Brunei", () => {
