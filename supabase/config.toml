@@ -252,6 +252,18 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# Sign-in emails carry a 6-digit code ({{ .Token }}) rather than only a link, so
+# people can sign in on a phone even if the email opens in a different app.
+# New users get the "confirmation" template, returning users "magic_link".
+# Mirror these in Dashboard → Authentication → Emails for the hosted project.
+[auth.email.template.confirmation]
+subject = "Your RumputBN code"
+content_path = "./supabase/templates/code.html"
+
+[auth.email.template.magic_link]
+subject = "Your RumputBN code"
+content_path = "./supabase/templates/code.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
@@ -266,7 +278,8 @@ otp_expiry = 3600
 [auth.sms]
 # Allow/disallow the phone provider. When false, users can't sign up or sign in with SMS.
 # To block new signups only, set enable_signup = false under [auth] instead.
-enabled = true
+# RumputBN signs in with email codes (free); SMS is off.
+enabled = false
 # If enabled, users need to confirm their phone number before signing in.
 enable_confirmations = false
 # Template for sending OTP to users
@@ -276,13 +289,8 @@ max_frequency = "5s"
 
 # Use pre-defined map of phone number to OTP for testing.
 # Keys are the phone number with country code and without the + prefix.
-# Local development only. Configure test numbers for the hosted project in
-# Dashboard → Authentication → Sign In / Providers → Phone.
-[auth.sms.test_otp]
-6737000001 = "123456"
-6737000002 = "123456"
-6738000001 = "123456"
-6738000002 = "123456"
+# [auth.sms.test_otp]
+# 14152127777 = "123456"
 
 # Configure logged in session timeouts.
 # [auth.sessions]
@@ -303,11 +311,9 @@ max_frequency = "5s"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 [auth.sms.twilio]
-# Local stack needs a provider enabled even for the test_otp numbers above
-# (those never send a real SMS). Put dummy or real values in supabase/.env.
-enabled = true
-account_sid = "env(SUPABASE_AUTH_SMS_TWILIO_ACCOUNT_SID)"
-message_service_sid = "env(SUPABASE_AUTH_SMS_TWILIO_MESSAGE_SERVICE_SID)"
+enabled = false
+account_sid = ""
+message_service_sid = ""
 # DO NOT commit your Twilio auth token to git. Use environment variable substitution instead:
 auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
 

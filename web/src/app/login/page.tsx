@@ -23,7 +23,7 @@ export default async function LoginPage({
       <SiteHeader viewer={null} />
       <main className="mx-auto max-w-sm px-4 py-10">
         <h1 className="text-2xl font-bold tracking-tight">Sign in or register</h1>
-        <p className="mt-1 text-sm text-stone-600">We&apos;ll text you a 6-digit code. No password needed.</p>
+        <p className="mt-1 text-sm text-stone-600">We&apos;ll email you a 6-digit code. No password needed.</p>
         <LoginForm next={next} />
       </main>
     </>

@@ -9,7 +9,7 @@ export default function SiteHeader({ viewer }: { viewer: Viewer | null }) {
         <Link href="/" className="text-lg font-bold tracking-tight">
           Rumput<span className="text-green-700">BN</span>
         </Link>
-        <nav className="flex items-center gap-4 text-sm">
+        <nav className="flex items-center gap-3 text-sm sm:gap-4">
           {viewer?.profile ? (
             <>
               {viewer.profile.role === "customer" && (
@@ -25,9 +25,9 @@ export default function SiteHeader({ viewer }: { viewer: Viewer | null }) {
               <Link href="/jobs" className="font-medium text-stone-900 hover:text-green-800">
                 My jobs
               </Link>
-              <form action={signOut}>
-                <button className="text-stone-500 hover:text-red-700">Sign out</button>
-              </form>
+              <Link href="/account" className="text-stone-700 hover:text-green-800">
+                Account
+              </Link>
             </>
           ) : viewer ? (
             <form action={signOut}>

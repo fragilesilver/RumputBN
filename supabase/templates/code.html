@@ -1,0 +1,9 @@
+<!-- Used for both "Confirm signup" and "Magic Link" emails. Paste the same
+     HTML into Dashboard → Authentication → Emails for the hosted project. -->
+<div style="font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; max-width: 420px; margin: 0 auto; padding: 24px; color: #1c1917;">
+  <h1 style="font-size: 22px; margin: 0 0 4px;">Rumput<span style="color: #15803d;">BN</span></h1>
+  <p style="margin: 0 0 20px; color: #57534e;">Your sign-in code is:</p>
+  <p style="font-size: 32px; font-weight: 700; letter-spacing: 8px; margin: 0 0 20px;">{{ .Token }}</p>
+  <p style="margin: 0 0 4px; color: #57534e; font-size: 14px;">Enter it in the RumputBN app. It expires in 1 hour.</p>
+  <p style="margin: 0; color: #a8a29e; font-size: 12px;">If you didn't ask for this, you can ignore this email.</p>
+</div>

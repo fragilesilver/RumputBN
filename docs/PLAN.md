@@ -65,7 +65,8 @@ cutter payout  = agreed price − fee     (B$36)
 | Layer | Choice |
 |---|---|
 | App | Next.js (App Router, TypeScript, Tailwind) — installable PWA later |
-| Backend | Supabase: Postgres + PostGIS, Auth (SMS one-time codes), Storage later |
+| Backend | Supabase: Postgres + PostGIS, Auth (email one-time codes), Storage later |
+| Auth email | Supabase's built-in sender for testing only (2/hour); free SMTP (e.g. Brevo, Resend) for launch |
 | Map | MapLibre GL + Terra Draw (drawing) + Turf.js (area, union/difference) |
 | Imagery | Esri World Imagery by default (configurable via env) |
 | Geocoding | OpenStreetMap Nominatim via `/api/geocode`, limited to Brunei |
@@ -81,7 +82,9 @@ cutter payout  = agreed price − fee     (B$36)
 - Unit tests for pricing and area maths.
 
 ### Phase 2 — Accounts & booking ✅
-- SMS login/registration for customers and cutters (`/login`, `/onboarding`).
+- Email-code login/registration for customers and cutters (`/login`, `/onboarding`).
+  Switched from SMS to keep it free. Users type a contact phone (Brunei format) at
+  onboarding, editable in `/account`; it's unverified.
 - Request a cutter from the quote; the drawing survives the sign-in detour.
 - Server re-prices every request from the shapes (client totals ignored).
 - Cutter service area: base pin + radius (`/cutter/setup`), PostGIS matching.
@@ -113,6 +116,14 @@ Still to do from Phase 2:
 - Bahasa Melayu / English toggle.
 - Admin dashboard: tune pricing tiers, view jobs, verify cutters.
 - Seasonal / monsoon demand pricing; calibrate rates from completed jobs.
+
+## Sign-in cost notes
+
+- Email codes: free in Supabase. The built-in sender is limited to about 2 emails/hour
+  and is meant for testing, so production needs custom SMTP. Free tiers: Brevo
+  (~300/day), Resend (~3,000/month, 100/day; needs your own domain).
+- SMS (removed): needs Twilio or similar; paid per message.
+- Later: Google sign-in is free and fast on Android; worth adding.
 
 ## Open questions
 - Is 20% the right commission for launch? (Configurable in `platform_settings`.)

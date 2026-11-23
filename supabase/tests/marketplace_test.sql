@@ -35,22 +35,26 @@ end;
 $$;
 grant execute on all functions in schema tests to public;
 
-insert into auth.users (id, phone) values
-  (:customer, '6737000001'), (:customer2, '6737000002'),
-  (:cutter, '6738000001'), (:farcutter, '6738000002'), (:latecutter, '6738000003');
+insert into auth.users (id) values (:customer), (:customer2), (:cutter), (:farcutter), (:latecutter);
 
 -- ---- profiles -------------------------------------------------------------
 select set_config('request.jwt.claim.sub', :customer, false);
 set role authenticated;
 select tests.expect_error(
   $$insert into public.profiles (id, role, full_name, phone) values (auth.uid(), 'customer', 'Aminah', '999')$$,
-  'permission denied');
-insert into public.profiles (id, role, full_name) values (:customer, 'customer', 'Aminah');
-select tests.expect((select phone from public.profiles where id = auth.uid()) = '6737000001',
-  'phone is copied from auth, not the client');
+  'profiles_phone_brunei');
+select tests.expect_error(
+  $$insert into public.profiles (id, role, full_name) values (auth.uid(), 'customer', 'Aminah')$$,
+  'profiles_phone_brunei');
+insert into public.profiles (id, role, full_name, phone) values (:customer, 'customer', 'Aminah', '+6737000001');
+update public.profiles set phone = '+6737000009' where id = auth.uid();
+update public.profiles set phone = '+6737000001' where id = auth.uid();
+select tests.expect((select phone from public.profiles where id = auth.uid()) = '+6737000001',
+  'users can set and change their own contact phone');
+select tests.expect_error($$update public.profiles set phone = '12345'$$, 'profiles_phone_brunei');
 select tests.expect_error($$update public.profiles set role = 'cutter'$$, 'permission denied');
 select tests.expect_error(
-  $$insert into public.profiles (id, role, full_name) values ('00000000-0000-0000-0000-0000000000a1', 'cutter', 'Fake')$$,
+  $$insert into public.profiles (id, role, full_name, phone) values ('00000000-0000-0000-0000-0000000000a1', 'cutter', 'Fake', '+6738000001')$$,
   'row-level security');
 select tests.expect_error(
   $$insert into public.cutter_profiles (id, base_location) values (auth.uid(), 'SRID=4326;POINT(114.94 4.89)')$$,
@@ -59,13 +63,13 @@ reset role;
 
 select set_config('request.jwt.claim.sub', :customer2, false);
 set role authenticated;
-insert into public.profiles (id, role, full_name) values (:customer2, 'customer', 'Hjh Siti');
+insert into public.profiles (id, role, full_name, phone) values (:customer2, 'customer', 'Hjh Siti', '+6737000002');
 reset role;
 
 -- Cutter near Bandar Seri Begawan, 10 km radius.
 select set_config('request.jwt.claim.sub', :cutter, false);
 set role authenticated;
-insert into public.profiles (id, role, full_name) values (:cutter, 'cutter', 'Awang Cutters');
+insert into public.profiles (id, role, full_name, phone) values (:cutter, 'cutter', 'Awang Cutters', '+6738000001');
 insert into public.cutter_profiles (id, base_location, service_radius_km)
   values (:cutter, 'SRID=4326;POINT(114.92 4.90)', 10);
 reset role;
@@ -73,14 +77,14 @@ reset role;
 -- Cutter in Kuala Belait (~90 km away), 15 km radius.
 select set_config('request.jwt.claim.sub', :farcutter, false);
 set role authenticated;
-insert into public.profiles (id, role, full_name) values (:farcutter, 'cutter', 'KB Lawn');
+insert into public.profiles (id, role, full_name, phone) values (:farcutter, 'cutter', 'KB Lawn', '+6738000002');
 insert into public.cutter_profiles (id, base_location, service_radius_km)
   values (:farcutter, 'SRID=4326;POINT(114.19 4.58)', 15);
 reset role;
 
 select set_config('request.jwt.claim.sub', :latecutter, false);
 set role authenticated;
-insert into public.profiles (id, role, full_name) values (:latecutter, 'cutter', 'Late Lad');
+insert into public.profiles (id, role, full_name, phone) values (:latecutter, 'cutter', 'Late Lad', '+6738000003');
 insert into public.cutter_profiles (id, base_location) values (:latecutter, 'SRID=4326;POINT(114.94 4.89)');
 reset role;
 
@@ -153,7 +157,7 @@ reset role;
 select set_config('request.jwt.claim.sub', :customer, false);
 set role authenticated;
 select tests.expect((select count(*) from public.job_offers) = 1, 'customer sees offers on own job');
-select tests.expect((select phone from public.profiles where id = :cutter) = '6738000001',
+select tests.expect((select phone from public.profiles where id = :cutter) = '+6738000001',
   'customer can see the offering cutter''s profile');
 select tests.expect((select count(*) from public.cutter_profiles) = 1, 'customer can see offering cutter''s details');
 reset role;
@@ -192,7 +196,7 @@ reset role;
 select set_config('request.jwt.claim.sub', :cutter, false);
 set role authenticated;
 select tests.expect((select count(*) from public.jobs) = 1, 'assigned cutter can now read the job');
-select tests.expect((select phone from public.profiles where id = :customer) = '6737000001',
+select tests.expect((select phone from public.profiles where id = :customer) = '+6737000001',
   'assigned cutter can see the customer''s contact');
 select tests.expect((select count(*) from public.open_jobs_nearby()) = 0, 'assigned job leaves the open list');
 reset role;

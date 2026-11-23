@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import NotConfigured from "@/components/ui/NotConfigured";
 import SiteHeader from "@/components/ui/SiteHeader";
-import { formatPhone } from "@/lib/phone";
 import { safeNext } from "@/lib/redirect";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { getViewer } from "@/lib/supabase/server";
@@ -25,7 +24,7 @@ export default async function OnboardingPage({
       <SiteHeader viewer={viewer} />
       <main className="mx-auto max-w-sm px-4 py-10">
         <h1 className="text-2xl font-bold tracking-tight">Welcome to RumputBN</h1>
-        <p className="mt-1 text-sm text-stone-600">Signed in as {formatPhone(viewer.phone)}.</p>
+        <p className="mt-1 text-sm text-stone-600">Signed in as {viewer.email}.</p>
         <OnboardingForm next={next} />
       </main>
     </>

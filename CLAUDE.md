@@ -9,7 +9,8 @@ See `docs/PLAN.md` for the product plan and phases.
   - `migrations/` — schema, RLS, RPCs. Clients only SELECT; state changes go through
     SECURITY DEFINER functions (`make_offer`, `accept_offer`, `set_job_status`, …).
   - `tests/run.sh` — schema/RLS tests on plain Postgres + PostGIS (no Docker needed).
-  - `config.toml` — local stack config; SMS test numbers `+6737000001/2`, `+6738000001/2`, code `123456`.
+  - `config.toml` — local stack config. Sign-in is by **email code** (SMS is off: it costs money).
+  - `templates/code.html` — sign-in email showing `{{ .Token }}`; mirror it in the hosted dashboard.
 - `web/` — Next.js 16 app (App Router, TypeScript, Tailwind v4). App commands run from here.
   - `src/lib/pricing.ts` — pricing engine (pure, BND). Change rates in `DEFAULT_PRICING` only.
   - `src/lib/geo.ts` — billable area from drawn shapes (Turf union/difference).
@@ -22,8 +23,8 @@ See `docs/PLAN.md` for the product plan and phases.
   - `src/app/jobs/actions.ts` — server actions; `src/app/{login,onboarding,cutter/setup,jobs}` — pages.
 
 ## Local Supabase (repo root, needs Docker)
-- `npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,realtime,storage-api,mailpit,postgres-meta`
-- Copy `supabase/.env.example` → `supabase/.env` (dummy Twilio values; test numbers never send SMS).
+- `npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,realtime,storage-api,postgres-meta`
+- Sign-in emails land in Mailpit: http://127.0.0.1:54324 (API: `/api/v1/search?query=to:"a@b.c"`).
 - Put the printed URL / publishable / secret keys in `web/.env.local`. `npx supabase db reset` re-applies migrations.
 
 ## Commands (in `web/`)
@@ -39,6 +40,8 @@ See `docs/PLAN.md` for the product plan and phases.
 - New tables: enable RLS, grant privileges explicitly (the project doesn't auto-grant), and
   `revoke execute ... from public, anon` on new functions. Add cases to `supabase/tests/marketplace_test.sql`.
 - PostgREST upsert also updates the key column; use update-or-insert where clients have column grants.
+- `profiles.phone` is typed in by the user (onboarding / `/account`), not verified; must match `^\+673\d{7}$`.
+- Never edit an applied migration; add a new one.
 - MapLibre v6 uses named exports only and needs `setWorkerUrl` (see `scripts/copy-maplibre-worker.mjs`).
 - npm installs may need `--legacy-peer-deps` (npm 10 arborist bug seen with vitest).
 - UI copy is English for now; a Malay toggle is planned — keep user-facing strings in components easy to extract.

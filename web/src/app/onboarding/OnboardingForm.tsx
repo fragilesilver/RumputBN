@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import PhoneField from "@/components/ui/PhoneField";
 import { completeOnboarding, type OnboardingState } from "./actions";
 
 const ROLES = [
@@ -14,6 +15,7 @@ export default function OnboardingForm({ next }: { next: string }) {
   });
   const [role, setRole] = useState<string>("customer");
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
 
   return (
     <form action={action} className="mt-6 space-y-5">
@@ -54,6 +56,15 @@ export default function OnboardingForm({ next }: { next: string }) {
           className="w-full rounded-lg bg-white px-3 py-3 ring-1 ring-stone-300 focus:outline-none focus:ring-2 focus:ring-green-700"
         />
       </div>
+      <PhoneField
+        value={phone}
+        onChange={setPhone}
+        hint={
+          role === "cutter"
+            ? "Shown to customers you make offers to, so they can call or WhatsApp you."
+            : "Shared only with the cutter you book, so they can call or WhatsApp you."
+        }
+      />
       {state.error && (
         <p role="alert" className="text-sm text-red-700">
           {state.error}

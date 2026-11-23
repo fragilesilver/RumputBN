@@ -21,7 +21,7 @@ export async function createClient() {
   });
 }
 
-export type Viewer = { userId: string; phone: string | null; profile: Profile | null };
+export type Viewer = { userId: string; email: string | null; profile: Profile | null };
 
 /** The signed-in user and their profile, or null when signed out. */
 export async function getViewer(): Promise<Viewer | null> {
@@ -34,5 +34,5 @@ export async function getViewer(): Promise<Viewer | null> {
     .select("id, role, full_name, phone")
     .eq("id", data.user.id)
     .maybeSingle<Profile>();
-  return { userId: data.user.id, phone: data.user.phone ?? null, profile: profile ?? null };
+  return { userId: data.user.id, email: data.user.email ?? null, profile: profile ?? null };
 }
